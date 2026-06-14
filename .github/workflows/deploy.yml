@@ -1,0 +1,68 @@
+name: Deploy - Trigger Manual
+
+# Workflow ini hanya trigger manual lewat GitHub UI.
+# Streamlit Community Cloud akan auto-deploy setiap push ke main/master.
+# Tidak ada step khusus karena platform akan membaca app.py langsung.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target deployment"
+        required: true
+        default: "streamlit-cloud"
+        type: choice
+        options:
+          - streamlit-cloud
+          - render
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install & compile check
+        run: |
+          pip install -r requirements.txt
+          python -m py_compile app.py
+          python -m py_compile saw_engine.py
+          python -m py_compile charts.py
+
+  deploy-streamlit-cloud:
+    needs: validate
+    if: ${{ github.event.inputs.environment == 'streamlit-cloud' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info deploy
+        run: |
+          echo "Aplikasi siap deploy."
+          echo ""
+          echo "Streamlit Community Cloud (gratis):"
+          echo "   1. Buka https://share.streamlit.io"
+          echo "   2. Connect repo GitHub ini"
+          echo "   3. Entry point: app.py"
+          echo "   4. Python: 3.11"
+          echo ""
+          echo "   Streamlit Cloud akan auto-deploy setiap push ke main."
+
+  deploy-render:
+    needs: validate
+    if: ${{ github.event.inputs.environment == 'render' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info deploy Render
+        run: |
+          echo "Kode valid. Untuk deploy ke Render:"
+          echo ""
+          echo "   1. Buka https://render.com"
+          echo "   2. New Web Service → Connect repo"
+          echo "   3. Build Command:  pip install -r requirements.txt"
+          echo "   4. Start Command:  streamlit run app.py --server.port \$PORT --server.address 0.0.0.0"
+          echo "   5. Environment: Python 3.11"

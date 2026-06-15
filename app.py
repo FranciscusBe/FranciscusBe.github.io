@@ -22,7 +22,6 @@ from charts import (
 from saw_engine import (
     BOBOT_DEFAULT,
     LABEL_KRITERIA,
-    NILAI_MIN_LULUS,
     buat_template_csv,
     hitung_saw,
 )
@@ -183,10 +182,6 @@ st.markdown(
         border: 1px solid rgba(14,165,233,0.25) !important;
         border-radius: 8px !important;
     }
-
-    /* Tabel hasil - warna status */
-    .status-lulus { color: #4ade80; font-weight: 600; }
-    .status-tidak { color: #f87171; font-weight: 600; }
 
     /* Section label */
     .section-label {
@@ -416,7 +411,6 @@ with st.sidebar:
     st.markdown("---")
     st.caption("PT Cendekia Trust Integrity")
     st.caption("Metode: Simple Additive Weighting (SAW)")
-    st.caption(f"Nilai minimum lulus: {NILAI_MIN_LULUS}")
 
 
 # ─── Header utama ────────────────────────────────────────────────────────────
@@ -470,20 +464,12 @@ if hasil is not None and hasil.sukses:
     df = hasil.df_hasil
 
     # ── Metric row ──
-    col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
+    col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
         st.metric("Total Peserta", r["total_peserta"])
     with col_m2:
-        st.metric(
-            "Lulus",
-            r["total_lulus"],
-            delta=f"{r['total_lulus'] / r['total_peserta'] * 100:.1f}%",
-        )
-    with col_m3:
-        st.metric("Tidak Lulus", r["total_tidak_lulus"])
-    with col_m4:
         st.metric("Nilai SAW Tertinggi", format_saw(r["nilai_saw_tertinggi"]))
-    with col_m5:
+    with col_m3:
         st.metric("Rata-rata SAW", format_saw(r["rata_rata_saw"]))
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
@@ -502,7 +488,7 @@ if hasil is not None and hasil.sukses:
     # TAB 1 - RANKING
     # ════════════════════════════════════════════════
     with tab_rangking:
-        col_filter1, col_filter2, col_filter3 = st.columns([2, 2, 3])
+        col_filter1, col_filter2 = st.columns(2)
         with col_filter1:
             filter_pelatihan = st.selectbox(
                 "Pelatihan",
@@ -515,20 +501,12 @@ if hasil is not None and hasil.sukses:
                 options=["Semua"] + r["kelas_list"],
                 key="filter_kelas",
             )
-        with col_filter3:
-            filter_status = st.selectbox(
-                "Status",
-                options=["Semua", "LULUS", "TIDAK LULUS"],
-                key="filter_status",
-            )
 
         df_filter = df.copy()
         if filter_pelatihan != "Semua":
             df_filter = df_filter[df_filter["Pelatihan"] == filter_pelatihan]
         if filter_kelas != "Semua":
             df_filter = df_filter[df_filter["Kelas"] == filter_kelas]
-        if filter_status != "Semua":
-            df_filter = df_filter[df_filter["Status"] == filter_status]
 
         st.markdown(
             f"<div class='section-label'>Menampilkan {len(df_filter)} dari {len(df)} peserta</div>",
@@ -548,7 +526,6 @@ if hasil is not None and hasil.sukses:
             "C4_Keaktifan",
             "C5_Sikap",
             "Nilai SAW",
-            "Status",
         ]
         df_show = df_filter[kolom_tampil].copy()
         df_show["Nilai SAW"] = df_show["Nilai SAW"].apply(lambda x: f"{x:.6f}")  # type: ignore[union-attr]
@@ -577,7 +554,6 @@ if hasil is not None and hasil.sukses:
                 ),
                 "C5_Sikap": st.column_config.NumberColumn("C5", format="%d", width=60),
                 "Nilai SAW": st.column_config.TextColumn("Nilai SAW", width=110),
-                "Status": st.column_config.TextColumn("Status", width=100),
             },
             hide_index=True,
         )
@@ -613,7 +589,7 @@ if hasil is not None and hasil.sukses:
 
         # Baris 3: Kontribusi bobot
         st.markdown(
-            '<div class="section-label">Kontribusi Bobot Tertimbang (Top 20 Lulus)</div>',
+            '<div class="section-label">Kontribusi Bobot Tertimbang (Top 20)</div>',
             unsafe_allow_html=True,
         )
         fig_kontribusi = chart_kontribusi_bobot(df)
@@ -649,7 +625,7 @@ if hasil is not None and hasil.sukses:
 
         with col_v6:
             st.markdown(
-                '<div class="section-label">Peserta Lulus per Instansi</div>',
+                '<div class="section-label">Peserta per Instansi</div>',
                 unsafe_allow_html=True,
             )
             fig_instansi = chart_instansi(df)
@@ -685,7 +661,7 @@ if hasil is not None and hasil.sukses:
         )
         st.caption("Nilai ternormalisasi = Nilai / Nilai Maksimum per kelas")
         st.dataframe(
-            hasil.df_normalisasi,
+            hasil.df_normalisasi.drop(columns=["Status"]),
             width="stretch",
             hide_index=True,
             height=350,
@@ -697,7 +673,7 @@ if hasil is not None and hasil.sukses:
         )
         st.caption("W*Cx = Nilai Normalisasi × Bobot Kriteria. Nilai SAW = Sigma W*Cx")
         st.dataframe(
-            hasil.df_terbobot,
+            hasil.df_terbobot.drop(columns=["Status"]),
             width="stretch",
             hide_index=True,
             height=350,
@@ -720,7 +696,6 @@ if hasil is not None and hasil.sukses:
                - `r_ij = x_ij / max(x_ij)` per kelas
             3. **Nilai Terbobot** — `v_i = Sigma(w_j * r_ij)`
             4. **Ranking** — Urutkan berdasarkan nilai V tertinggi
-            5. **Status Kelulusan** — Maks 1 kriteria < 70 dan rata-rata kriteria ≥ 70 harus ≥ 80
 
             **Kriteria dan Bobot Default:**
             - C1 Pre-Test: 15%
@@ -743,17 +718,17 @@ if hasil is not None and hasil.sukses:
         with col_e1:
             st.download_button(
                 label="Hasil Lengkap (CSV)",
-                data=csv_bytes(hasil.df_hasil),
+                data=csv_bytes(hasil.df_hasil.drop(columns=["Status"])),
                 file_name="hasil_saw_acls.csv",
                 mime="text/csv",
                 width="stretch",
             )
-            st.caption("Semua kolom: nilai asli, normalisasi, terbobot, SAW, status")
+            st.caption("Semua kolom: nilai asli, normalisasi, terbobot, SAW")
 
         with col_e2:
             st.download_button(
                 label="Matriks Normalisasi (CSV)",
-                data=csv_bytes(hasil.df_normalisasi),
+                data=csv_bytes(hasil.df_normalisasi.drop(columns=["Status"])),
                 file_name="normalisasi_matriks.csv",
                 mime="text/csv",
                 width="stretch",
@@ -763,7 +738,7 @@ if hasil is not None and hasil.sukses:
         with col_e3:
             st.download_button(
                 label="Nilai Terbobot (CSV)",
-                data=csv_bytes(hasil.df_terbobot),
+                data=csv_bytes(hasil.df_terbobot.drop(columns=["Status"])),
                 file_name="nilai_terbobot_saw.csv",
                 mime="text/csv",
                 width="stretch",
@@ -811,9 +786,9 @@ if hasil is not None and hasil.sukses:
         )
 
         peta_preview = {
-            "Hasil Lengkap": hasil.df_hasil,
-            "Normalisasi": hasil.df_normalisasi,
-            "Terbobot": hasil.df_terbobot,
+            "Hasil Lengkap": hasil.df_hasil.drop(columns=["Status"]),
+            "Normalisasi": hasil.df_normalisasi.drop(columns=["Status"]),
+            "Terbobot": hasil.df_terbobot.drop(columns=["Status"]),
         }
         st.dataframe(peta_preview[aktif], width="stretch", hide_index=True)
 

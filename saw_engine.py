@@ -114,7 +114,6 @@ KOLOM_OUTPUT: list[str] = [
     "Nilai SAW",
     "Peringkat",
     "Status",
-    "Keterangan",
 ]
 
 
@@ -200,7 +199,6 @@ def _hitung_saw_per_kelas(grup: pd.DataFrame, bobot: dict[str, float]) -> pd.Dat
     hasil["Nilai SAW"] = hasil[kolom_terbobot].sum(axis=1)
 
     hasil["Status"] = ""
-    hasil["Keterangan"] = ""
 
     nilai_kriteria = hasil[kriteria]
     di_bawah_60 = nilai_kriteria.lt(NILAI_MIN_LULUS).sum(axis=1)
@@ -212,15 +210,6 @@ def _hitung_saw_per_kelas(grup: pd.DataFrame, bobot: dict[str, float]) -> pd.Dat
 
     lulus = (di_bawah_60 <= MAKS_KRITERIA_DI_BAWAH) & (rata_ge >= MIN_RATA_AMAN)
     hasil["Status"] = lulus.map({True: "LULUS", False: "TIDAK LULUS"})  # type: ignore[union-attr]
-
-    hasil["Keterangan"] = hasil.apply(
-        lambda r: (
-            f"{int(di_bawah_60[r.name])} kriteria < {NILAI_MIN_LULUS}, "
-            f"rata-rata ≥ {NILAI_MIN_LULUS} = {rata_ge[r.name]:.1f} "
-            f"({'>= ' + str(MIN_RATA_AMAN) if r['Status'] == 'LULUS' else '< ' + str(MIN_RATA_AMAN)})"
-        ),
-        axis=1,
-    )
 
     lulus = hasil[hasil["Status"] == "LULUS"].sort_values(
         ["Nilai SAW", "Nama Peserta"],

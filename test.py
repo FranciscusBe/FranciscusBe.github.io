@@ -360,25 +360,3 @@ class TestKebijakanBaru:
         hasil = hitung_saw(df, BOBOT_DEFAULT)
         assert hasil.sukses
         assert hasil.df_hasil.iloc[0]["Status"] == "LULUS"
-
-    def test_keterangan_menjelaskan(self):
-        """Kolom Keterangan harus mendeskripsikan alasan kelulusan."""
-        df = pd.DataFrame(
-            {
-                "No": [1],
-                "Nama Peserta": ["Peserta F"],
-                "Instansi": ["Instansi X"],
-                "Pelatihan": ["P1"],
-                "Kelas": ["A"],
-                "C1_PreTest": [85],
-                "C2_Praktik": [80],
-                "C3_PostTest": [58],
-                "C4_Keaktifan": [90],
-                "C5_Sikap": [75],
-            }
-        )
-        hasil = hitung_saw(df, BOBOT_DEFAULT)
-        assert hasil.sukses
-        ket = hasil.df_hasil.iloc[0]["Keterangan"]
-        assert "1 kriteria < 70" in ket
-        assert "rata-rata" in ket.lower()

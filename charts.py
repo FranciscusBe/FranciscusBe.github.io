@@ -62,21 +62,17 @@ def _apply_base(fig: go.Figure, title: str = "") -> go.Figure:
 
 
 def chart_ranking_saw(df: pd.DataFrame, top_n: int = 25) -> go.Figure:
-    df_lulus = (
-        df[df["Status"] == "LULUS"]
-        .sort_values("Nilai SAW", ascending=False)  # type: ignore[call-overload]
-        .head(top_n)
-    )
+    df_top = df.sort_values("Nilai SAW", ascending=False).head(top_n)  # type: ignore[call-overload]
 
-    warna = [WARNA_AKSEN if i == 0 else WARNA_LULUS for i in range(len(df_lulus))]
+    warna = [WARNA_AKSEN if i == 0 else WARNA_LULUS for i in range(len(df_top))]
 
     fig = go.Figure(
         go.Bar(
-            x=df_lulus["Nilai SAW"],
-            y=df_lulus["Nama Peserta"],
+            x=df_top["Nilai SAW"],
+            y=df_top["Nama Peserta"],
             orientation="h",
             marker=dict(color=warna, opacity=0.88),
-            text=[f"{v:.4f}" for v in df_lulus["Nilai SAW"]],
+            text=[f"{v:.4f}" for v in df_top["Nilai SAW"]],
             textposition="outside",
             textfont=dict(size=11, color="#94a3b8"),
             hovertemplate=("<b>%{y}</b><br>Nilai SAW: %{x:.6f}<br><extra></extra>"),
@@ -86,7 +82,7 @@ def chart_ranking_saw(df: pd.DataFrame, top_n: int = 25) -> go.Figure:
     fig.update_yaxes(autorange="reversed", categoryorder="total ascending")
     fig.update_xaxes(range=[0, 1.12])
     _apply_base(fig, "Ranking Peserta Berdasarkan Nilai SAW")
-    fig.update_layout(height=max(320, len(df_lulus) * 28 + 80))
+    fig.update_layout(height=max(320, len(df_top) * 28 + 80))
     return fig
 
 
@@ -103,53 +99,25 @@ def chart_radar_kriteria(df: pd.DataFrame) -> go.Figure:
     ]
     label_cols = ["Pre-Test", "Praktik", "Post-Test", "Keaktifan", "Sikap & Disiplin"]
 
-    df_lulus = df[df["Status"] == "LULUS"]
-    df_tidak_lulus = df[df["Status"] == "TIDAK LULUS"]
-
     def rata(subset):
         return [
             round(subset[c].mean(), 2) if len(subset) > 0 else 0 for c in kriteria_cols
         ]
 
-    r_lulus = rata(df_lulus)
-    r_tidak_lulus = rata(df_tidak_lulus)
     r_semua = rata(df)
 
     cats = label_cols + [label_cols[0]]
 
     fig = go.Figure()
 
-    if len(df_lulus) > 0:
-        fig.add_trace(
-            go.Scatterpolar(
-                r=r_lulus + [r_lulus[0]],
-                theta=cats,
-                fill="toself",
-                fillcolor="rgba(37,99,235,0.18)",
-                line=dict(color=WARNA_LULUS, width=2),
-                name="Lulus",
-            )
-        )
-
-    if len(df_tidak_lulus) > 0:
-        fig.add_trace(
-            go.Scatterpolar(
-                r=r_tidak_lulus + [r_tidak_lulus[0]],
-                theta=cats,
-                fill="toself",
-                fillcolor="rgba(220,38,38,0.12)",
-                line=dict(color=WARNA_TIDAK_LULUS, width=2),
-                name="Tidak Lulus",
-            )
-        )
-
     fig.add_trace(
         go.Scatterpolar(
             r=r_semua + [r_semua[0]],
             theta=cats,
-            line=dict(color="#f59e0b", width=1.5, dash="dot"),
-            name="Rata-rata Semua",
-            mode="lines",
+            fill="toself",
+            fillcolor="rgba(37,99,235,0.18)",
+            line=dict(color=WARNA_LULUS, width=2),
+            name="Rata-rata",
         )
     )
 
@@ -184,11 +152,7 @@ def chart_radar_kriteria(df: pd.DataFrame) -> go.Figure:
 
 
 def chart_kontribusi_bobot(df: pd.DataFrame, top_n: int = 20) -> go.Figure:
-    df_top = (
-        df[df["Status"] == "LULUS"]
-        .sort_values("Nilai SAW", ascending=False)  # type: ignore[call-overload]
-        .head(top_n)
-    )
+    df_top = df.sort_values("Nilai SAW", ascending=False).head(top_n)  # type: ignore[call-overload]
     if df_top.empty:
         return go.Figure()
 
@@ -236,30 +200,27 @@ def chart_scatter_dua_kriteria(
     x_label: str,
     y_label: str,
 ) -> go.Figure:
-    warna_map = {"LULUS": WARNA_LULUS, "TIDAK LULUS": WARNA_TIDAK_LULUS}
-
     fig = go.Figure()
-    for status, grp in df.groupby("Status"):
-        fig.add_trace(
-            go.Scatter(
-                x=grp[x_col],
-                y=grp[y_col],
-                mode="markers",
-                name=status,
-                marker=dict(
-                    color=warna_map.get(str(status), WARNA_NETRAL),
-                    size=9,
-                    opacity=0.8,
-                    line=dict(width=1, color="#0f172a"),
-                ),
-                text=grp["Nama Peserta"],
-                hovertemplate=(
-                    "<b>%{text}</b><br>"
-                    f"{x_label}: %{{x}}<br>"
-                    f"{y_label}: %{{y}}<extra></extra>"
-                ),
-            )
+    fig.add_trace(
+        go.Scatter(
+            x=df[x_col],
+            y=df[y_col],
+            mode="markers",
+            name="Peserta",
+            marker=dict(
+                color=WARNA_LULUS,
+                size=9,
+                opacity=0.8,
+                line=dict(width=1, color="#0f172a"),
+            ),
+            text=df["Nama Peserta"],
+            hovertemplate=(
+                "<b>%{text}</b><br>"
+                f"{x_label}: %{{x}}<br>"
+                f"{y_label}: %{{y}}<extra></extra>"
+            ),
         )
+    )
 
     fig.add_hline(
         y=NILAI_MIN_LULUS,
@@ -317,21 +278,19 @@ def chart_boxplot_kriteria(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-# ─── 8. Bar instansi terbanyak lulus ─────────────────────────────────────────
+# ─── 8. Bar instansi terbanyak ─────────────────────────────────────────
 
 
 def chart_instansi(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
-    df_lulus = df[df["Status"] == "LULUS"]
-    if df_lulus.empty:
-        return go.Figure()
-
     counts = (
-        df_lulus.groupby("Instansi")
+        df.groupby("Instansi")
         .size()
         .reset_index(name="Jumlah")  # type: ignore[call-overload]
         .sort_values("Jumlah", ascending=True)
         .tail(top_n)
     )
+    if counts.empty:
+        return go.Figure()
 
     fig = go.Figure(
         go.Bar(
@@ -339,10 +298,10 @@ def chart_instansi(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
             y=counts["Instansi"],
             orientation="h",
             marker=dict(color=WARNA_AKSEN, opacity=0.8),
-            hovertemplate="<b>%{y}</b><br>Lulus: %{x}<extra></extra>",
+            hovertemplate="<b>%{y}</b><br>Peserta: %{x}<extra></extra>",
         )
     )
 
-    _apply_base(fig, "Peserta Lulus per Instansi")
+    _apply_base(fig, "Peserta per Instansi")
     fig.update_layout(height=max(280, len(counts) * 26 + 80))
     return fig

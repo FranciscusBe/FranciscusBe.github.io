@@ -27,7 +27,9 @@ LABEL_KRITERIA: dict[str, str] = {
     "C5_Sikap": "C5 - Sikap & Disiplin",
 }
 
-NILAI_MIN_LULUS: int = 60
+NILAI_MIN_LULUS: int = 70
+MAKS_KRITERIA_DI_BAWAH: int = 1  # maksimal 1 kriteria boleh < 70
+MIN_RATA_AMAN: int = 80  # rata-rata kriteria ≥ 70 harus ≥ 80
 
 KOLOM_INPUT_WAJIB: list[str] = [
     "Nama Peserta",
@@ -197,19 +199,27 @@ def _hitung_saw_per_kelas(grup: pd.DataFrame, bobot: dict[str, float]) -> pd.Dat
     kolom_terbobot = [f"W*{k.split('_')[0]}" for k in kriteria]
     hasil["Nilai SAW"] = hasil[kolom_terbobot].sum(axis=1)
 
-    hasil["Status"] = (
-        hasil[kriteria]
-        .ge(NILAI_MIN_LULUS)
-        .all(axis=1)
-        .map(  # type: ignore[union-attr]
-            {True: "LULUS", False: "TIDAK LULUS"}
-        )
-    )
-    hasil["Keterangan"] = hasil["Status"].map(
-        {  # type: ignore[arg-type]
-            "LULUS": "Semua nilai >= 60",
-            "TIDAK LULUS": "Ada nilai < 60",
-        }
+    hasil["Status"] = ""
+    hasil["Keterangan"] = ""
+
+    nilai_kriteria = hasil[kriteria]
+    di_bawah_60 = nilai_kriteria.lt(NILAI_MIN_LULUS).sum(axis=1)
+
+    # Hitung rata-rata hanya dari kriteria yang ≥ batas
+    nilai_ge = nilai_kriteria.where(nilai_kriteria >= NILAI_MIN_LULUS, 0)
+    jumlah_ge = nilai_kriteria.ge(NILAI_MIN_LULUS).sum(axis=1).replace(0, 1)
+    rata_ge = (nilai_ge.sum(axis=1) / jumlah_ge).round(2)
+
+    lulus = (di_bawah_60 <= MAKS_KRITERIA_DI_BAWAH) & (rata_ge >= MIN_RATA_AMAN)
+    hasil["Status"] = lulus.map({True: "LULUS", False: "TIDAK LULUS"})  # type: ignore[union-attr]
+
+    hasil["Keterangan"] = hasil.apply(
+        lambda r: (
+            f"{int(di_bawah_60[r.name])} kriteria < {NILAI_MIN_LULUS}, "
+            f"rata-rata ≥ {NILAI_MIN_LULUS} = {rata_ge[r.name]:.1f} "
+            f"({'>= ' + str(MIN_RATA_AMAN) if r['Status'] == 'LULUS' else '< ' + str(MIN_RATA_AMAN)})"
+        ),
+        axis=1,
     )
 
     lulus = hasil[hasil["Status"] == "LULUS"].sort_values(

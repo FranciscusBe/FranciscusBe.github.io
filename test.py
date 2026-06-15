@@ -246,3 +246,139 @@ class TestHitungSAW:
         assert (
             hasil.df_hasil.iloc[0]["Nilai SAW"] >= hasil.df_hasil.iloc[1]["Nilai SAW"]
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Kebijakan Kelulusan Baru
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestKebijakanBaru:
+    """Test kebijakan baru: maks 1 kriteria < 60 + rata-rata ≥ 60 harus ≥ 80."""
+
+    def test_contoh_laporan_lulus(self):
+        """Contoh dari laporan: Post-Test 58, lainnya ≥ 60. Seharusnya LULUS."""
+        df = pd.DataFrame(
+            {
+                "No": [1],
+                "Nama Peserta": ["Peserta A"],
+                "Instansi": ["Instansi X"],
+                "Pelatihan": ["P1"],
+                "Kelas": ["A"],
+                "C1_PreTest": [85],
+                "C2_Praktik": [80],
+                "C3_PostTest": [58],  # < 60
+                "C4_Keaktifan": [90],
+                "C5_Sikap": [75],
+            }
+        )
+        hasil = hitung_saw(df, BOBOT_DEFAULT)
+        assert hasil.sukses
+        assert hasil.df_hasil.iloc[0]["Status"] == "LULUS"
+        # Rata-rata: (85+80+90+75)/4 = 82.5 ≥ 80 → LULUS
+
+    def test_dua_di_bawah_60_tidak_lulus(self):
+        """2 kriteria < 60 → langsung TIDAK LULUS."""
+        df = pd.DataFrame(
+            {
+                "No": [1],
+                "Nama Peserta": ["Peserta B"],
+                "Instansi": ["Instansi X"],
+                "Pelatihan": ["P1"],
+                "Kelas": ["A"],
+                "C1_PreTest": [55],  # < 60
+                "C2_Praktik": [55],  # < 60
+                "C3_PostTest": [90],
+                "C4_Keaktifan": [90],
+                "C5_Sikap": [90],
+            }
+        )
+        hasil = hitung_saw(df, BOBOT_DEFAULT)
+        assert hasil.sukses
+        assert hasil.df_hasil.iloc[0]["Status"] == "TIDAK LULUS"
+
+    def test_satu_di_bawah_tapi_rata_rendah(self):
+        """1 kriteria < 60 tapi rata-rata ≥ 60 cuma 70 → TIDAK LULUS."""
+        df = pd.DataFrame(
+            {
+                "No": [1],
+                "Nama Peserta": ["Peserta C"],
+                "Instansi": ["Instansi X"],
+                "Pelatihan": ["P1"],
+                "Kelas": ["A"],
+                "C1_PreTest": [55],  # < 60
+                "C2_Praktik": [70],
+                "C3_PostTest": [70],
+                "C4_Keaktifan": [70],
+                "C5_Sikap": [70],
+            }
+        )
+        hasil = hitung_saw(df, BOBOT_DEFAULT)
+        assert hasil.sukses
+        # Rata-rata: (70+70+70+70)/4 = 70 < 80 → TIDAK LULUS
+        assert hasil.df_hasil.iloc[0]["Status"] == "TIDAK LULUS"
+
+    def test_semua_60_rata_60_tidak_lulus(self):
+        """Semua nilai 60 → rata-rata 60 < 80 → TIDAK LULUS."""
+        df = pd.DataFrame(
+            {
+                "No": [1],
+                "Nama Peserta": ["Peserta D"],
+                "Instansi": ["Instansi X"],
+                "Pelatihan": ["P1"],
+                "Kelas": ["A"],
+                "C1_PreTest": [60],
+                "C2_Praktik": [60],
+                "C3_PostTest": [60],
+                "C4_Keaktifan": [60],
+                "C5_Sikap": [60],
+            }
+        )
+        hasil = hitung_saw(df, BOBOT_DEFAULT)
+        assert hasil.sukses
+        # Rata-rata: 60 — masih di bawah 80? Iya, 60 < 80.
+        # Tapi semua ≥ 60 → 0 kriteria < 60, rata-rata = 60 < 80 → TIDAK LULUS!
+        # Ini sesuai kebijakan baru: minimal rata-rata ≥ 80.
+        assert hasil.df_hasil.iloc[0]["Status"] == "TIDAK LULUS"
+
+    def test_nilai_pas_80_rata_rata_lulus(self):
+        """Rata-rata tepat 80 → LULUS."""
+        df = pd.DataFrame(
+            {
+                "No": [1],
+                "Nama Peserta": ["Peserta E"],
+                "Instansi": ["Instansi X"],
+                "Pelatihan": ["P1"],
+                "Kelas": ["A"],
+                "C1_PreTest": [80],
+                "C2_Praktik": [80],
+                "C3_PostTest": [80],
+                "C4_Keaktifan": [80],
+                "C5_Sikap": [80],
+            }
+        )
+        hasil = hitung_saw(df, BOBOT_DEFAULT)
+        assert hasil.sukses
+        assert hasil.df_hasil.iloc[0]["Status"] == "LULUS"
+
+    def test_keterangan_menjelaskan(self):
+        """Kolom Keterangan harus mendeskripsikan alasan kelulusan."""
+        df = pd.DataFrame(
+            {
+                "No": [1],
+                "Nama Peserta": ["Peserta F"],
+                "Instansi": ["Instansi X"],
+                "Pelatihan": ["P1"],
+                "Kelas": ["A"],
+                "C1_PreTest": [85],
+                "C2_Praktik": [80],
+                "C3_PostTest": [58],
+                "C4_Keaktifan": [90],
+                "C5_Sikap": [75],
+            }
+        )
+        hasil = hitung_saw(df, BOBOT_DEFAULT)
+        assert hasil.sukses
+        ket = hasil.df_hasil.iloc[0]["Keterangan"]
+        assert "1 kriteria < 70" in ket
+        assert "rata-rata" in ket.lower()

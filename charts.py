@@ -7,6 +7,8 @@ Setiap fungsi menerima DataFrame hasil SAW dan mengembalikan go.Figure.
 import pandas as pd
 import plotly.graph_objects as go
 
+from saw_engine import NILAI_MIN_LULUS
+
 # ─── Palet warna ─────────────────────────────────────────────────────────────
 
 WARNA_LULUS = "#2563eb"
@@ -88,53 +90,7 @@ def chart_ranking_saw(df: pd.DataFrame, top_n: int = 25) -> go.Figure:
     return fig
 
 
-# ─── 2. Donut chart status kelulusan ─────────────────────────────────────────
-
-
-def chart_donut_status(total_lulus: int, total_tidak_lulus: int) -> go.Figure:
-    labels = ["Lulus", "Tidak Lulus"]
-    values = [total_lulus, total_tidak_lulus]
-    warna = [WARNA_LULUS, WARNA_TIDAK_LULUS]
-
-    fig = go.Figure(
-        go.Pie(
-            labels=labels,
-            values=values,
-            hole=0.62,
-            marker=dict(colors=warna, line=dict(color="#0f172a", width=2)),
-            textfont=dict(size=13),
-            hovertemplate="<b>%{label}</b><br>%{value} peserta (%{percent})<extra></extra>",
-        )
-    )
-
-    total = total_lulus + total_tidak_lulus
-    persen_lulus = (total_lulus / total * 100) if total > 0 else 0
-
-    layout = {k: v for k, v in LAYOUT_BASE.items() if k not in ("legend", "margin")}
-    fig.update_layout(  # type: ignore[arg-type]
-        **layout,  # type: ignore[arg-type]
-        height=280,
-        annotations=[
-            dict(
-                text=f"<b>{persen_lulus:.0f}%</b><br><span style='font-size:11px'>Lulus</span>",
-                font=dict(size=18, color="#e2e8f0"),
-                showarrow=False,
-            )
-        ],
-        legend=dict(
-            orientation="h",
-            x=0.5,
-            xanchor="center",
-            y=-0.08,
-            bgcolor="rgba(0,0,0,0)",
-            font=dict(size=12),
-        ),
-        margin=dict(l=10, r=10, t=10, b=10),
-    )
-    return fig
-
-
-# ─── 3. Radar chart rata-rata nilai per kriteria ──────────────────────────────
+# ─── 2. Radar chart rata-rata nilai per kriteria ──────────────────────────────
 
 
 def chart_radar_kriteria(df: pd.DataFrame) -> go.Figure:
@@ -306,13 +262,13 @@ def chart_scatter_dua_kriteria(
         )
 
     fig.add_hline(
-        y=60,
+        y=NILAI_MIN_LULUS,
         line_dash="dot",
         line_color="#f59e0b",
         opacity=0.5,
         annotation_text="Min Lulus",
     )
-    fig.add_vline(x=60, line_dash="dot", line_color="#f59e0b", opacity=0.5)
+    fig.add_vline(x=NILAI_MIN_LULUS, line_dash="dot", line_color="#f59e0b", opacity=0.5)
 
     _apply_base(fig, f"{x_label} vs {y_label}")
     fig.update_xaxes(title_text=x_label)
@@ -349,11 +305,11 @@ def chart_boxplot_kriteria(df: pd.DataFrame) -> go.Figure:
         )
 
     fig.add_hline(
-        y=60,
+        y=NILAI_MIN_LULUS,
         line_dash="dash",
         line_color="#f59e0b",
         opacity=0.6,
-        annotation_text="Batas Lulus (60)",
+        annotation_text=f"Batas Lulus ({NILAI_MIN_LULUS})",
     )
 
     _apply_base(fig, "Distribusi Nilai per Kriteria")

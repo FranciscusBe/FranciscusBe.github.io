@@ -38,7 +38,8 @@ Template CSV tersedia via tombol di sidebar.
 
 - Upload CSV, hitung SAW otomatis
 - Konfigurasi bobot kriteria live dari sidebar
+- **Kebijakan Kelulusan Baru**: maks 1 kriteria < 70 + rata-rata kriteria ≥ 70 harus ≥ 80
 - Tab Ranking: tabel + filter + bar chart
-- Tab Visualisasi: donut, radar, histogram, boxplot, scatter, stacked bar, instansi
+- Tab Visualisasi: donut, radar, boxplot, scatter, stacked bar, instansi
 - Tab Detail: matriks normalisasi + nilai terbobot + penjelasan metode
 - Tab Export: download CSV hasil, normalisasi, terbobot

@@ -13,7 +13,6 @@ import streamlit as st
 
 from charts import (
     chart_boxplot_kriteria,
-    chart_donut_status,
     chart_instansi,
     chart_kontribusi_bobot,
     chart_radar_kriteria,
@@ -592,27 +591,13 @@ if hasil is not None and hasil.sukses:
     # TAB 2 - VISUALISASI
     # ════════════════════════════════════════════════
     with tab_visual:
-        # Baris 1: Donut + Radar
-        col_v1, col_v2 = st.columns([1, 1.6])
-        with col_v1:
-            st.markdown(
-                '<div class="section-label">Status Kelulusan</div>',
-                unsafe_allow_html=True,
-            )
-            fig_donut = chart_donut_status(r["total_lulus"], r["total_tidak_lulus"])
-            st.plotly_chart(
-                fig_donut, width="stretch", config={"displayModeBar": False}
-            )
-
-        with col_v2:
-            st.markdown(
-                '<div class="section-label">Profil Nilai Kriteria</div>',
-                unsafe_allow_html=True,
-            )
-            fig_radar = chart_radar_kriteria(df)
-            st.plotly_chart(
-                fig_radar, width="stretch", config={"displayModeBar": False}
-            )
+        # Baris 1: Radar
+        st.markdown(
+            '<div class="section-label">Profil Nilai Kriteria</div>',
+            unsafe_allow_html=True,
+        )
+        fig_radar = chart_radar_kriteria(df)
+        st.plotly_chart(fig_radar, width="stretch", config={"displayModeBar": False})
 
         st.markdown("---")
 
@@ -735,7 +720,7 @@ if hasil is not None and hasil.sukses:
                - `r_ij = x_ij / max(x_ij)` per kelas
             3. **Nilai Terbobot** — `v_i = Sigma(w_j * r_ij)`
             4. **Ranking** — Urutkan berdasarkan nilai V tertinggi
-            5. **Status Kelulusan** — Peserta LULUS jika semua nilai asli >= 60
+            5. **Status Kelulusan** — Maks 1 kriteria < 70 dan rata-rata kriteria ≥ 70 harus ≥ 80
 
             **Kriteria dan Bobot Default:**
             - C1 Pre-Test: 15%

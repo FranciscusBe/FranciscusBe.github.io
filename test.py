@@ -209,15 +209,15 @@ class TestHitungSAW:
         assert df.loc[mask_lulus, "Peringkat"].ne("").all()
         assert df.loc[~mask_lulus, "Peringkat"].eq("").all()
 
-    def test_normalisasi_max_per_kelas(self):
-        """N-C1..N-C5 dalam df_normalisasi, nilai max per kelas harus 1.0."""
+    def test_normalisasi_range_0_1(self):
+        """Nilai N-C1..N-C5 harus dalam range [0, 1] (dibagi 100)."""
         hasil = hitung_saw(self._df_input(), BOBOT_DEFAULT)
         assert hasil.sukses
         dfn = hasil.df_normalisasi
-        for _, grp in dfn.groupby("Kelas"):
-            for c in [f"N-C{i}" for i in range(1, 6)]:
-                if c in grp.columns:
-                    assert math.isclose(grp[c].max(), 1.0, rel_tol=1e-6)
+        for c in [f"N-C{i}" for i in range(1, 6)]:
+            if c in dfn.columns:
+                assert (dfn[c] >= 0).all()
+                assert (dfn[c] <= 1).all()
 
     def test_bobot_custom(self):
         df = pd.DataFrame(

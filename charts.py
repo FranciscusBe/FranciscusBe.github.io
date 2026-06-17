@@ -305,3 +305,316 @@ def chart_instansi(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     _apply_base(fig, "Peserta per Instansi")
     fig.update_layout(height=max(280, len(counts) * 26 + 80))
     return fig
+
+
+# ─── 9. Heatmap nilai normalisasi ─────────────────────────────────────────
+
+
+def chart_heatmap_normalisasi(df: pd.DataFrame, top_n: int = 30) -> go.Figure:
+    """Heatmap nilai N-C1..N-C5 untuk top peserta."""
+    df_top = df.sort_values("Nilai SAW", ascending=False).head(top_n)  # type: ignore[call-overload]
+
+    cols_n = ["N-C1", "N-C2", "N-C3", "N-C4", "N-C5"]
+    labels = ["Pre-Test", "Praktik", "Post-Test", "Keaktifan", "Sikap"]
+
+    z = df_top[cols_n].values
+    y = df_top["Nama Peserta"].tolist()
+
+    fig = go.Figure(
+        go.Heatmap(
+            z=z,
+            x=labels,
+            y=y,
+            colorscale="Blues",
+            zmin=0,
+            zmax=1,
+            text=[[f"{v:.3f}" for v in row] for row in z],
+            texttemplate="%{text}",
+            textfont=dict(size=10, color="#94a3b8"),
+            hovertemplate="<b>%{y}</b><br>%{x}: %{z:.4f}<extra></extra>",
+            colorbar=dict(
+                title=dict(text="Nilai", font=dict(color="#94a3b8")),
+                tickfont=dict(color="#94a3b8"),
+            ),
+        )
+    )
+
+    _apply_base(fig, "Heatmap Nilai Normalisasi")
+    fig.update_layout(
+        height=max(360, top_n * 24 + 80), yaxis=dict(tickfont=dict(size=10))
+    )
+    return fig
+
+
+# ─── 10. Heatmap nilai terbobot ──────────────────────────────────────────
+
+
+def chart_heatmap_terbobot(df: pd.DataFrame, top_n: int = 30) -> go.Figure:
+    """Heatmap nilai W*C1..W*C5 untuk top peserta."""
+    df_top = df.sort_values("Nilai SAW", ascending=False).head(top_n)  # type: ignore[call-overload]
+
+    cols_w = ["W*C1", "W*C2", "W*C3", "W*C4", "W*C5"]
+    labels = [
+        "Pre-Test (15%)",
+        "Praktik (35%)",
+        "Post-Test (20%)",
+        "Keaktifan (15%)",
+        "Sikap (15%)",
+    ]
+
+    z = df_top[cols_w].values
+    y = df_top["Nama Peserta"].tolist()
+
+    fig = go.Figure(
+        go.Heatmap(
+            z=z,
+            x=labels,
+            y=y,
+            colorscale="Greens",
+            zmin=0,
+            zmax=0.35,
+            text=[[f"{v:.4f}" for v in row] for row in z],
+            texttemplate="%{text}",
+            textfont=dict(size=10, color="#94a3b8"),
+            hovertemplate="<b>%{y}</b><br>%{x}: %{z:.4f}<extra></extra>",
+            colorbar=dict(
+                title=dict(text="Nilai", font=dict(color="#94a3b8")),
+                tickfont=dict(color="#94a3b8"),
+            ),
+        )
+    )
+
+    _apply_base(fig, "Heatmap Nilai Terbobot")
+    fig.update_layout(
+        height=max(360, top_n * 24 + 80), yaxis=dict(tickfont=dict(size=10))
+    )
+    return fig
+
+
+# ─── 11. Histogram distribusi Nilai SAW ─────────────────────────────────
+
+
+def chart_histogram_saw(df: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(
+        go.Histogram(
+            x=df["Nilai SAW"],
+            nbinsx=20,
+            marker_color=WARNA_LULUS,
+            opacity=0.8,
+            hovertemplate="Nilai SAW: %{x:.4f}<br>Jumlah: %{y}<extra></extra>",
+        )
+    )
+    _apply_base(fig, "Distribusi Nilai SAW")
+    fig.update_layout(height=300, xaxis_title="Nilai SAW", yaxis_title="Jumlah")
+    return fig
+
+
+# ─── 12. Bar bobot kriteria ──────────────────────────────────────────────
+
+
+def chart_bar_bobot(bobot: dict[str, float]) -> go.Figure:
+    label_map = {
+        "C1_PreTest": "Pre-Test",
+        "C2_Praktik": "Praktik",
+        "C3_PostTest": "Post-Test",
+        "C4_Keaktifan": "Keaktifan",
+        "C5_Sikap": "Sikap",
+    }
+    labels = [label_map[k] for k in bobot]
+    values = [bobot[k] * 100 for k in bobot]
+
+    fig = go.Figure(
+        go.Bar(
+            x=values,
+            y=labels,
+            orientation="h",
+            marker=dict(color=PALET_KRITERIA, opacity=0.85),
+            text=[f"{v:.0f}%" for v in values],
+            textposition="outside",
+            textfont=dict(size=12, color="#e2e8f0"),
+            hovertemplate="<b>%{y}</b>: %{x:.0f}%<extra></extra>",
+        )
+    )
+    _apply_base(fig, "Bobot Kriteria")
+    fig.update_layout(height=260, xaxis_title="Bobot (%)", showlegend=False)
+    fig.update_xaxes(range=[0, 45])
+    return fig
+
+
+# ─── 13. Korelasi kriteria vs Nilai SAW ─────────────────────────────────
+
+
+def chart_korelasi_saw(df: pd.DataFrame) -> go.Figure:
+    kriteria_cols = [
+        "C1_PreTest",
+        "C2_Praktik",
+        "C3_PostTest",
+        "C4_Keaktifan",
+        "C5_Sikap",
+    ]
+    labels = ["Pre-Test", "Praktik", "Post-Test", "Keaktifan", "Sikap"]
+
+    corr_vals = [df[c].corr(df["Nilai SAW"]) for c in kriteria_cols]  # type: ignore
+    colors = ["#3b82f6" if v > 0 else "#ef4444" for v in corr_vals]
+
+    fig = go.Figure(
+        go.Bar(
+            x=corr_vals,
+            y=labels,
+            orientation="h",
+            marker=dict(color=colors, opacity=0.85),
+            text=[f"{v:.4f}" for v in corr_vals],
+            textposition="outside",
+            textfont=dict(size=11, color="#94a3b8"),
+            hovertemplate="<b>%{y}</b><br>Korelasi dgn SAW: %{x:.4f}<extra></extra>",
+        )
+    )
+    _apply_base(fig, "Korelasi Kriteria vs Nilai SAW")
+    fig.update_layout(height=260, xaxis_title="Koefisien Korelasi", showlegend=False)
+    fig.add_vline(x=0, line_color="#475569", line_width=1)
+    return fig
+
+
+# ─── 14. Parallel coordinates ────────────────────────────────────────────
+
+
+def chart_parallel_coords(df: pd.DataFrame, top_n: int = 30) -> go.Figure:
+    df_top = df.sort_values("Nilai SAW", ascending=False).head(top_n)  # type: ignore[call-overload]
+
+    kriteria_cols = [
+        "C1_PreTest",
+        "C2_Praktik",
+        "C3_PostTest",
+        "C4_Keaktifan",
+        "C5_Sikap",
+    ]
+    labels = ["Pre-Test", "Praktik", "Post-Test", "Keaktifan", "Sikap"]
+
+    dimensions = []
+    for col, lbl in zip(kriteria_cols, labels):
+        dimensions.append(
+            dict(
+                label=lbl,
+                values=df_top[col].tolist(),
+                range=[0, 100],
+            )
+        )
+    dimensions.append(
+        dict(
+            label="Nilai SAW",
+            values=df_top["Nilai SAW"].tolist(),
+            range=[df_top["Nilai SAW"].min(), df_top["Nilai SAW"].max()],
+        )
+    )
+
+    fig = go.Figure(
+        go.Parcoords(
+            line=dict(
+                color=df_top["Nilai SAW"],
+                colorscale="Blues",
+                showscale=True,
+                colorbar=dict(
+                    title=dict(text="SAW", font=dict(color="#94a3b8", size=10)),
+                    tickfont=dict(color="#94a3b8", size=9),
+                ),
+            ),
+            dimensions=dimensions,
+        )
+    )
+    _apply_base(fig, "Parallel Coordinates (Top 30)")
+    fig.update_layout(height=380)
+    return fig
+
+
+# ─── 15. Rata-rata SAW per kelas ─────────────────────────────────────────
+
+
+def chart_rata_saw_per_kelas(df: pd.DataFrame) -> go.Figure:
+    rata_per_kelas = df.groupby("Kelas")["Nilai SAW"].mean().sort_values()  # type: ignore[union-attr]
+    if rata_per_kelas.empty:
+        return go.Figure()
+
+    fig = go.Figure(
+        go.Bar(
+            x=rata_per_kelas.values,
+            y=rata_per_kelas.index.tolist(),
+            orientation="h",
+            marker=dict(color=WARNA_AKSEN, opacity=0.85),
+            text=[f"{v:.4f}" for v in rata_per_kelas.values],
+            textposition="outside",
+            textfont=dict(size=11, color="#94a3b8"),
+            hovertemplate="<b>Kelas %{y}</b><br>Rata-rata SAW: %{x:.4f}<extra></extra>",
+        )
+    )
+    _apply_base(fig, "Rata-rata Nilai SAW per Kelas")
+    fig.update_layout(height=max(200, len(rata_per_kelas) * 36 + 60), showlegend=False)
+    return fig
+
+
+# ─── 16. Top 5 vs Bottom 5 ───────────────────────────────────────────────
+
+
+def chart_top_vs_bottom(df: pd.DataFrame) -> go.Figure:
+    df_sorted = df.sort_values("Nilai SAW", ascending=False)
+    top5 = df_sorted.head(5)
+    bot5 = df_sorted.tail(5)
+
+    kriteria_cols = [
+        "C1_PreTest",
+        "C2_Praktik",
+        "C3_PostTest",
+        "C4_Keaktifan",
+        "C5_Sikap",
+    ]
+    labels = ["Pre-Test", "Praktik", "Post-Test", "Keaktifan", "Sikap"]
+    cats = labels + [labels[0]]
+
+    r_top = [round(top5[c].mean(), 1) for c in kriteria_cols]
+    r_bot = [round(bot5[c].mean(), 1) for c in kriteria_cols]
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatterpolar(
+            r=r_top + [r_top[0]],
+            theta=cats,
+            fill="toself",
+            fillcolor="rgba(37,99,235,0.2)",
+            line=dict(color=WARNA_LULUS, width=2),
+            name="Top 5",
+        )
+    )
+    fig.add_trace(
+        go.Scatterpolar(
+            r=r_bot + [r_bot[0]],
+            theta=cats,
+            fill="toself",
+            fillcolor="rgba(220,38,38,0.15)",
+            line=dict(color=WARNA_TIDAK_LULUS, width=2),
+            name="Bottom 5",
+        )
+    )
+
+    fig.update_layout(  # type: ignore[arg-type]
+        **LAYOUT_BASE,  # type: ignore[arg-type]
+        height=340,
+        title=dict(
+            text="Top 5 vs Bottom 5",
+            font=dict(size=14, color="#94a3b8"),
+        ),
+        polar=dict(
+            bgcolor="#111827",
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                gridcolor="rgba(100,116,139,0.25)",
+                tickfont=dict(size=9, color="#64748b"),
+                tickvals=[20, 40, 60, 80, 100],
+            ),
+            angularaxis=dict(
+                gridcolor="rgba(100,116,139,0.25)",
+                tickfont=dict(size=10, color="#94a3b8"),
+            ),
+        ),
+    )
+    return fig

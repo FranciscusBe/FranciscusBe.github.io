@@ -12,12 +12,20 @@ import pandas as pd
 import streamlit as st
 
 from charts import (
+    chart_bar_bobot,
     chart_boxplot_kriteria,
+    chart_heatmap_normalisasi,
+    chart_heatmap_terbobot,
+    chart_histogram_saw,
     chart_instansi,
     chart_kontribusi_bobot,
+    chart_korelasi_saw,
+    chart_parallel_coords,
     chart_radar_kriteria,
     chart_ranking_saw,
+    chart_rata_saw_per_kelas,
     chart_scatter_dua_kriteria,
+    chart_top_vs_bottom,
 )
 from saw_engine import (
     BOBOT_DEFAULT,
@@ -567,27 +575,114 @@ if hasil is not None and hasil.sukses:
     # TAB 2 - VISUALISASI
     # ════════════════════════════════════════════════
     with tab_visual:
-        # Baris 1: Radar
-        st.markdown(
-            '<div class="section-label">Profil Nilai Kriteria</div>',
-            unsafe_allow_html=True,
-        )
-        fig_radar = chart_radar_kriteria(df)
-        st.plotly_chart(fig_radar, width="stretch", config={"displayModeBar": False})
+        # Baris 1: Radar + Bobot
+        c1, c2 = st.columns([1, 0.7])
+        with c1:
+            st.markdown(
+                '<div class="section-label">Profil Nilai Kriteria</div>',
+                unsafe_allow_html=True,
+            )
+            fig_radar = chart_radar_kriteria(df)
+            st.plotly_chart(
+                fig_radar, width="stretch", config={"displayModeBar": False}
+            )
+        with c2:
+            st.markdown(
+                '<div class="section-label">Bobot Kriteria</div>',
+                unsafe_allow_html=True,
+            )
+            fig_bobot = chart_bar_bobot(hasil.bobot)
+            st.plotly_chart(
+                fig_bobot, width="stretch", config={"displayModeBar": False}
+            )
 
         st.markdown("---")
 
-        # Baris 2: Boxplot
-        st.markdown(
-            '<div class="section-label">Sebaran Nilai per Kriteria</div>',
-            unsafe_allow_html=True,
-        )
-        fig_box = chart_boxplot_kriteria(df)
-        st.plotly_chart(fig_box, width="stretch", config={"displayModeBar": False})
+        # Baris 2: Parallel Coordinates
+        fig_par = chart_parallel_coords(df)
+        st.plotly_chart(fig_par, width="stretch", config={"displayModeBar": False})
 
         st.markdown("---")
 
-        # Baris 3: Kontribusi bobot
+        # Baris 3: Heatmap Norm + Terbobot
+        c3, c4 = st.columns(2)
+        with c3:
+            st.markdown(
+                '<div class="section-label">Heatmap Normalisasi (Top 30)</div>',
+                unsafe_allow_html=True,
+            )
+            fig_hm_norm = chart_heatmap_normalisasi(df)
+            st.plotly_chart(
+                fig_hm_norm, width="stretch", config={"displayModeBar": False}
+            )
+        with c4:
+            st.markdown(
+                '<div class="section-label">Heatmap Terbobot (Top 30)</div>',
+                unsafe_allow_html=True,
+            )
+            fig_hm_w = chart_heatmap_terbobot(df)
+            st.plotly_chart(fig_hm_w, width="stretch", config={"displayModeBar": False})
+
+        st.markdown("---")
+
+        # Baris 4: Histogram + Boxplot
+        c5, c6 = st.columns(2)
+        with c5:
+            st.markdown(
+                '<div class="section-label">Distribusi Nilai SAW</div>',
+                unsafe_allow_html=True,
+            )
+            fig_hist = chart_histogram_saw(df)
+            st.plotly_chart(fig_hist, width="stretch", config={"displayModeBar": False})
+        with c6:
+            st.markdown(
+                '<div class="section-label">Sebaran Nilai per Kriteria</div>',
+                unsafe_allow_html=True,
+            )
+            fig_box = chart_boxplot_kriteria(df)
+            st.plotly_chart(fig_box, width="stretch", config={"displayModeBar": False})
+
+        st.markdown("---")
+
+        # Baris 5: Korelasi + Rata per Kelas
+        c7, c8 = st.columns(2)
+        with c7:
+            st.markdown(
+                '<div class="section-label">Korelasi Kriteria vs SAW</div>',
+                unsafe_allow_html=True,
+            )
+            fig_kor = chart_korelasi_saw(df)
+            st.plotly_chart(fig_kor, width="stretch", config={"displayModeBar": False})
+        with c8:
+            st.markdown(
+                '<div class="section-label">Rata-rata SAW per Kelas</div>',
+                unsafe_allow_html=True,
+            )
+            fig_rata_k = chart_rata_saw_per_kelas(df)
+            st.plotly_chart(
+                fig_rata_k, width="stretch", config={"displayModeBar": False}
+            )
+
+        st.markdown("---")
+
+        # Baris 6: Top 5 vs Bottom 5 + Instansi
+        c9, c10 = st.columns(2)
+        with c9:
+            fig_tvb = chart_top_vs_bottom(df)
+            st.plotly_chart(fig_tvb, width="stretch", config={"displayModeBar": False})
+        with c10:
+            st.markdown(
+                '<div class="section-label">Peserta per Instansi</div>',
+                unsafe_allow_html=True,
+            )
+            fig_instansi = chart_instansi(df)
+            st.plotly_chart(
+                fig_instansi, width="stretch", config={"displayModeBar": False}
+            )
+
+        st.markdown("---")
+
+        # Baris 7: Kontribusi Bobot
         st.markdown(
             '<div class="section-label">Kontribusi Bobot Tertimbang (Top 20)</div>',
             unsafe_allow_html=True,
@@ -599,13 +694,13 @@ if hasil is not None and hasil.sukses:
 
         st.markdown("---")
 
-        # Baris 4: Scatter + Instansi
-        col_v5, col_v6 = st.columns(2)
-        with col_v5:
-            st.markdown(
-                '<div class="section-label">Perbandingan Dua Kriteria</div>',
-                unsafe_allow_html=True,
-            )
+        # Baris 8: Scatter
+        st.markdown(
+            '<div class="section-label">Perbandingan Dua Kriteria</div>',
+            unsafe_allow_html=True,
+        )
+        c11, c12 = st.columns([2, 1])
+        with c11:
             opsi_kriteria = {
                 "C1 - Pre-Test": ("C1_PreTest", "Pre-Test"),
                 "C2 - Praktik": ("C2_Praktik", "Praktik"),
@@ -614,24 +709,17 @@ if hasil is not None and hasil.sukses:
                 "C5 - Sikap & Disiplin": ("C5_Sikap", "Sikap & Disiplin"),
             }
             kunci_list = list(opsi_kriteria.keys())
-            s_x = st.selectbox("Sumbu X", kunci_list, index=0, key="scatter_x")
-            s_y = st.selectbox("Sumbu Y", kunci_list, index=1, key="scatter_y")
+            c_sx, c_sy = st.columns(2)
+            with c_sx:
+                s_x = st.selectbox("Sumbu X", kunci_list, index=0, key="scatter_x")
+            with c_sy:
+                s_y = st.selectbox("Sumbu Y", kunci_list, index=1, key="scatter_y")
             c_x, l_x = opsi_kriteria[s_x]
             c_y, l_y = opsi_kriteria[s_y]
-            fig_scatter = chart_scatter_dua_kriteria(df, c_x, c_y, l_x, l_y)
-            st.plotly_chart(
-                fig_scatter, width="stretch", config={"displayModeBar": False}
-            )
-
-        with col_v6:
-            st.markdown(
-                '<div class="section-label">Peserta per Instansi</div>',
-                unsafe_allow_html=True,
-            )
-            fig_instansi = chart_instansi(df)
-            st.plotly_chart(
-                fig_instansi, width="stretch", config={"displayModeBar": False}
-            )
+        with c12:
+            st.caption("Min Lulus = 70")
+        fig_scatter = chart_scatter_dua_kriteria(df, c_x, c_y, l_x, l_y)
+        st.plotly_chart(fig_scatter, width="stretch", config={"displayModeBar": False})
 
     # ════════════════════════════════════════════════
     # TAB 3 - DETAIL PERHITUNGAN

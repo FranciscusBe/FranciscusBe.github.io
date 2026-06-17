@@ -2,6 +2,9 @@
 saw_engine.py
 Engine perhitungan SAW (Simple Additive Weighting) untuk MEDISELECT.
 Terpisah dari UI agar mudah diuji dan digunakan ulang.
+
+FIXED: Normalisasi dan ranking dilakukan GLOBAL (seluruh kelas digabung),
+sesuai sheet 'Perangkingan SAW (Seluruh Kelas)' di Excel.
 """
 
 import re
@@ -183,11 +186,17 @@ def validasi_df(df: pd.DataFrame) -> pd.DataFrame:
 # ─── Perhitungan SAW ──────────────────────────────────────────────────────────
 
 
-def _hitung_saw_per_kelas(grup: pd.DataFrame, bobot: dict[str, float]) -> pd.DataFrame:
-    hasil = grup.copy()
+def _hitung_saw_global(df: pd.DataFrame, bobot: dict[str, float]) -> pd.DataFrame:
+    """
+    Normalisasi dan ranking dilakukan secara GLOBAL (seluruh kelas digabung).
+    MAX diambil dari seluruh dataset — sesuai Excel sheet 'Perangkingan SAW (Seluruh Kelas)'.
+    Formula: N-Ci = x_ij / MAX(x_ij) dimana MAX dihitung dari semua peserta semua kelas.
+    """
+    hasil = df.copy()
     kriteria = list(bobot)
     hasil["_urut_asli"] = range(len(hasil))
 
+    # MAX global dari seluruh dataset (bukan per kelas)
     max_val = hasil[kriteria].max()
 
     for k in kriteria:
@@ -203,7 +212,7 @@ def _hitung_saw_per_kelas(grup: pd.DataFrame, bobot: dict[str, float]) -> pd.Dat
     nilai_kriteria = hasil[kriteria]
     di_bawah_60 = nilai_kriteria.lt(NILAI_MIN_LULUS).sum(axis=1)
 
-    # Hitung rata-rata hanya dari kriteria yang ≥ batas
+    # Hitung rata-rata hanya dari kriteria yang >= batas
     nilai_ge = nilai_kriteria.where(nilai_kriteria >= NILAI_MIN_LULUS, 0)
     jumlah_ge = nilai_kriteria.ge(NILAI_MIN_LULUS).sum(axis=1).replace(0, 1)
     rata_ge = (nilai_ge.sum(axis=1) / jumlah_ge).round(2)
@@ -211,13 +220,14 @@ def _hitung_saw_per_kelas(grup: pd.DataFrame, bobot: dict[str, float]) -> pd.Dat
     lulus = (di_bawah_60 <= MAKS_KRITERIA_DI_BAWAH) & (rata_ge >= MIN_RATA_AMAN)
     hasil["Status"] = lulus.map({True: "LULUS", False: "TIDAK LULUS"})  # type: ignore[union-attr]
 
-    lulus = hasil[hasil["Status"] == "LULUS"].sort_values(
+    # Sort: LULUS dulu (Nilai SAW desc, Nama asc), lalu TIDAK LULUS (urut asli)
+    lulus_df = hasil[hasil["Status"] == "LULUS"].sort_values(
         ["Nilai SAW", "Nama Peserta"],
         ascending=[False, True],  # type: ignore[call-overload]
     )
-    tidak_lulus = hasil[hasil["Status"] == "TIDAK LULUS"].sort_values("_urut_asli")  # type: ignore[call-overload]
+    tidak_lulus_df = hasil[hasil["Status"] == "TIDAK LULUS"].sort_values("_urut_asli")  # type: ignore[call-overload]
 
-    hasil = pd.concat([lulus, tidak_lulus], ignore_index=True)
+    hasil = pd.concat([lulus_df, tidak_lulus_df], ignore_index=True)
     hasil["Peringkat"] = ""
     mask = hasil["Status"] == "LULUS"
     peringkat_vals = [str(i) for i in range(1, int(mask.sum()) + 1)]
@@ -256,11 +266,8 @@ def hitung_saw(df: pd.DataFrame, bobot: dict[str, float] | None = None) -> Hasil
             sukses=False,
         )
 
-    hasil_list = []
-    for _, grup in df_valid.groupby(["Pelatihan", "Kelas"], sort=False):
-        hasil_list.append(_hitung_saw_per_kelas(grup, bobot))
-
-    df_hasil = pd.concat(hasil_list, ignore_index=True)
+    # FIXED: Ranking global — semua kelas digabung, MAX diambil dari seluruh data
+    df_hasil = _hitung_saw_global(df_valid, bobot)
     df_hasil = df_hasil[KOLOM_OUTPUT]
 
     kolom_normalisasi = [
